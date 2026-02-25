@@ -18,7 +18,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-BASE_URL = "https://api.inciteful.xyz/paper"
+BASE_URL = "https://graph.incitefulmed.com/openalex/paper"
 BATCH_SIZE = 100
 REQUEST_DELAY = 0.5  # seconds between API calls
 CSV_PATH = Path(__file__).parent / "ALAN_DB.csv"
