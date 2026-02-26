@@ -1,60 +1,81 @@
-# ALAN Citation Graph Analysis
+# Citation Graph Analysis
 
-Fetches paper metadata for a list of DOIs from the [Inciteful API](https://api.inciteful.xyz), builds a citation graph, and identifies the most connected external papers (papers not in the original list but heavily cited by or citing papers in the list).
+Fetches paper metadata for a list of DOIs from the Inciteful API, builds a citation graph, and identifies the most connected external papers — papers not in your original list but heavily cited by or citing papers in it.
 
 ## Requirements
 
 - Python 3.10+ (uses only the standard library, no `pip install` needed)
-- `ALAN_DB.csv` in the same directory, with a single `DOI` column
+- A CSV file with a `DOI` column (one DOI per row)
 
-## Usage
+## Quick start
 
 ```bash
-python3 alan_citation_analysis.py
+# Run with defaults (reads dois.csv, writes results.json)
+python3 citation_analysis.py
+
+# Customize inputs and output
+python3 citation_analysis.py -i my_papers.csv -o my_results.json -n 100
 ```
 
-Runtime is roughly 1-2 minutes (5,200+ DOIs across 53 API batches with a 0.5s delay between each).
+Run `python3 citation_analysis.py --help` for all options.
 
 ## What it does
 
-1. **Reads DOIs** from `ALAN_DB.csv`
-2. **Fetches paper metadata** from the Inciteful API in batches of 100, collecting citation links (`citing` and `cited_by` arrays)
-3. **Builds a citation graph** where nodes are paper IDs and edges are citation relationships. External papers (referenced but not in the CSV) get stub nodes.
-4. **Analyzes external papers** by three rankings:
+1. **Reads DOIs** from the input CSV
+2. **Loads the ignore list** — DOIs or OpenAlex IDs of papers to exclude (previously reviewed and rejected)
+3. **Fetches paper metadata** from the Inciteful API in batches, collecting citation links (`citing` and `cited_by` arrays)
+4. **Builds a citation graph** where nodes are paper IDs and edges are citation relationships. External papers (referenced but not in the CSV) get stub nodes. Ignored papers are excluded entirely.
+5. **Analyzes external papers** by six rankings:
    - **(a) Most cited by in-list papers** — papers your list references the most (influential foundational works)
    - **(b) Citing the most in-list papers** — papers that reference many of your papers (review articles, meta-analyses)
-   - **(c) Combined** — sum of (a) and (b)
-5. **Fetches metadata** (DOI, title, year) for the top external papers via a second round of API calls
-6. **Outputs results** to the console and saves them to `alan_citation_results.json`
+   - **(c) Combined** — min of (a) and (b), rewarding bidirectional connections
+   - **(d) Similarity** — fraction of an external paper's outgoing citations that point to in-list papers; highlights papers focused on your topic
+   - **(e) Adamic/Adar** — like (b) but weighted: citing a niche in-list paper (few total citations) contributes more than citing a popular one; surfaces papers that share a specific sub-topic
+   - **(f) Salton Index** — co-citation metric: when an in-list paper's reference list includes both an external paper and other in-list papers, those are co-cited; normalized by `sqrt(num_cited_by)` of both papers to handle citation count disparities
+6. **Fetches metadata** (DOI, title, year, journal) for the top external papers via a second round of API calls
+7. **Outputs results** to the console and saves them to a JSON file
 
 ## Output
 
-`alan_citation_results.json` contains:
+The JSON results file contains:
 
-- `summary` — graph stats (node/edge counts, papers fetched vs missing)
-- `top_cited_by_inlist` — top 50 external papers most cited by your list
-- `top_citing_inlist` — top 50 external papers that cite the most papers in your list
-- `top_combined` — top 50 by combined score
+- `summary` — graph stats (node/edge counts, papers fetched vs. missing, ignored count)
+- `top_cited_by_inlist` — top N external papers most cited by your list
+- `top_citing_inlist` — top N external papers that cite the most papers in your list
+- `top_combined` — top N by combined (min) score
+- `top_similarity` — top N by citation fraction
+- `top_adamic_adar` — top N by Adamic/Adar score
+- `top_salton` — top N by Salton Index
 
-Each entry includes `id`, `doi`, `doi_url`, `openalex_url`, `title`, `year`, `journal`, and the relevant counts.
+Each entry includes `id`, `doi`, `doi_url`, `openalex_url`, `title`, `year`, `journal`, and the relevant scores/counts.
 
-## Configuration
+## CLI options
 
-All tunable constants are at the top of `alan_citation_analysis.py`:
+| Flag           | Short | Default           | Description                                           |
+| -------------- | ----- | ----------------- | ----------------------------------------------------- |
+| `--input`      | `-i`  | `dois.csv`        | Path to the input DOIs CSV file                       |
+| `--output`     | `-o`  | `results.json`    | Path for the JSON results file                        |
+| `--ignore`     |       | `ignore_list.csv` | Path to the ignore-list CSV (DOIs or OpenAlex IDs)    |
+| `--top-n`      | `-n`  | `50`              | Number of top results to display and save per ranking |
+| `--batch-size` |       | `100`             | Number of DOIs per API request                        |
+| `--delay`      |       | `0.5`             | Seconds to wait between API requests                  |
+| `--pool-size`  |       | `1000`            | Candidate pool size for similarity/Salton rankings    |
 
-| Constant        | Default                      | Description                       |
-| --------------- | ---------------------------- | --------------------------------- |
-| `BATCH_SIZE`    | `100`                        | Number of DOIs per API request    |
-| `REQUEST_DELAY` | `0.5`                        | Seconds to wait between API calls |
-| `CSV_PATH`      | `ALAN_DB.csv`                | Path to the input CSV file        |
-| `OUTPUT_PATH`   | `alan_citation_results.json` | Path to the output JSON file      |
+## Input files
 
-### Common modifications
+**DOIs CSV** — must have a header row with DOIs in the first column. Example:
 
-**Change the input file:** Update `CSV_PATH` to point to a different CSV. The file must have a header row and DOIs in the first column.
+```
+DOI
+10.1001/jama.288.7.841
+10.1038/s41586-020-2649-2
+```
 
-**Adjust the top-N ranking size:** The `most_common(50)` calls control how many results appear. Search for `most_common(50)` and change `50` to your desired number. The `n` parameter on `print_top` controls the console output separately.
+**Ignore list CSV** — same format, but entries can be either DOIs or OpenAlex IDs (e.g. `W4285719527`). Papers on this list are excluded from the graph and all rankings. Use this to skip papers you've already reviewed and determined are not relevant.
 
-**Change batch size:** If you hit URL length limits with very long DOIs, reduce `BATCH_SIZE`. If you want fewer API calls, increase it (up to ~200 is safe for typical DOI lengths).
+## Tips
 
-**Add rate limiting:** Increase `REQUEST_DELAY` if you encounter 429 rate-limit errors.
+- **First run:** Start with defaults to see what the data looks like, then adjust `--top-n` or `--pool-size` as needed.
+- **Rate limits:** If you encounter 429 errors, increase `--delay`.
+- **URL length limits:** If you have very long DOIs, reduce `--batch-size`.
+- **Re-running monthly:** Add rejected papers to the ignore list so they don't reappear in future results.

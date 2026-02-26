@@ -1,0 +1,56 @@
+{
+  "summary": {
+    "total_dois_in_csv": 5215,
+    "papers_fetched": 5121,
+    "total_nodes": 220462,
+    "in_list_nodes": 5119,
+    "external_nodes": 215343,
+    "total_edges": 453312,
+    "unique_external_cited_by_inlist": 120726,
+    "unique_external_citing_inlist": 107976
+  },
+  "top_cited_by_inlist": [
+    {
+      "id": "W4285719527",
+      "count": 379,
+      "doi": null,
+      "doi_url": null,
+      "openalex_url": "https://api.openalex.org/works/W4285719527",
+      "title": null,
+      "year": null,
+      "journal": null
+    },
+    {
+      "id": "W2111092972",
+      "count": 342,
+      "doi": "10.1111/j.1600-079x.2007.00473.x",
+      "doi_url": "https://doi.org/10.1111/j.1600-079x.2007.00473.x",
+      "openalex_url": "https://api.openalex.org/works/W2111092972",
+      "title": "The dark side of light at night: physiological, epidemiological, and ecological consequences",
+      "year": 2007,
+      "journal": "Journal of Pineal Research"
+    },
+  ],
+  "top_citing_inlist": [
+    {
+      "id": "W3105062967",
+      "count": 96,
+      "doi": "10.3389/fnins.2020.602796",
+      "doi_url": "https://doi.org/10.3389/fnins.2020.602796",
+      "openalex_url": "https://api.openalex.org/works/W3105062967",
+      "title": "Exposure to Artificial Light at Night and the Consequences for Flora, Fauna, and Ecosystems",
+      "year": 2020,
+      "journal": "Frontiers in Neuroscience"
+    },
+    {
+      "id": "W3120246017",
+      "count": 89,
+      "doi": "10.1007/s42977-020-00065-x",
+      "doi_url": "https://doi.org/10.1007/s42977-020-00065-x",
+      "openalex_url": "https://api.openalex.org/works/W3120246017",
+      "title": "Artificial night light alters ecosystem services provided by biotic components",
+      "year": 2021,
+      "journal": "Biologia Futura"
+    }
+  ]
+}
